@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Sokoban</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; background: #f0f0f0; margin-top: 20px; }
+    #game { display: inline-block; margin-top: 10px; }
+    .row { display: flex; }
+    .cell {
+      width: 40px; height: 40px;
+      border: 1px solid #ccc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      box-sizing: border-box;
+    }
+    .wall { background: #333; }
+    .player { background: #4caf50; color: white; }
+    .box { background: #795548; }
+    .goal { background: #f44336; color: white; }
+    .box.goal { background: orange; }
+    .controls { margin: 10px; }
+    button { padding: 6px 12px; margin: 5px; font-size: 16px; }
+  </style>
+</head>
+<body>
+
+<h1>Sokoban</h1>
+<div class="controls">
+  <button onclick="resetLevel()">🔄 Reiniciar</button>
+  <button onclick="nextLevel()">➡️ Siguiente Nivel</button>
+</div>
+<div id="game"></div>
+<p>Usa las flechas para mover al jugador</p>
+
+<script>
+  const levels = [
+    [
+      "########",
+      "#  .   #",
+      "#  $   #",
+      "#  @   #",
+      "########"
+    ],
+    [
+      "########",
+      "#  .@  #",
+      "#  $$  #",
+      "#  .   #",
+      "########"
+    ],
+    [
+      "########",
+      "# . .  #",
+      "# $$   #",
+      "#  @   #",
+      "########"
+    ]
+  ];
+
+  let currentLevel = 0;
+  let map = [];
+  const gameDiv = document.getElementById("game");
+
+  function loadLevel(levelIndex) {
+    map = levels[levelIndex].map(row => row.split(""));
+    render();
+  }
+
+  function render() {
+    gameDiv.innerHTML = "";
+    map.forEach((row, y) => {
+      const rowDiv = document.createElement("div");
+      rowDiv.className = "row";
+      row.forEach((cell, x) => {
+        const cellDiv = document.createElement("div");
+        cellDiv.className = "cell";
+        let char = "";
+
+        const isGoal = cell === '.' || cell === '*' || cell === '+';
+        const isBox = cell === '$' || cell === '*';
+        const isPlayer = cell === '@' || cell === '+';
+
+        if (cell === '#') cellDiv.classList.add("wall");
+        if (isGoal) cellDiv.classList.add("goal");
+        if (isBox) cellDiv.classList.add("box");
+        if (isBox && isGoal) cellDiv.classList.add("goal", "box");
+        if (isPlayer) cellDiv.classList.add("player");
+
+        if (isBox) char = "📦";
+        if (isPlayer) char = "🙂";
+        if (isGoal && !isBox && !isPlayer) char = "⭕";
+
+        cellDiv.textContent = char;
+        rowDiv.appendChild(cellDiv);
+      });
+      gameDiv.appendChild(rowDiv);
+    });
+  }
+
+  function findPlayer() {
+    for (let y = 0; y < map.length; y++) {
+      for (let x = 0; x < map[y].length; x++) {
+        if (map[y][x] === '@' || map[y][x] === '+') {
+          return { x, y };
+        }
+      }
+    }
+  }
+
+  function move(dx, dy) {
+    const { x, y } = findPlayer();
+    const target = map[y + dy]?.[x + dx];
+    const beyond = map[y + dy * 2]?.[x + dx * 2];
+
+    if (!target) return;
+
+    const isWalkable = c => c === " " || c === ".";
+    const isBox = c => c === "$" || c === "*";
+
+    // Movimiento a celda vacía o meta
+    if (isWalkable(target)) {
+      map[y][x] = map[y][x] === '+' ? '.' : ' ';
+      map[y + dy][x + dx] = target === '.' ? '+' : '@';
+    }
+    // Empujar caja
+    else if (isBox(target) && isWalkable(beyond)) {
+      map[y][x] = map[y][x] === '+' ? '.' : ' ';
+      map[y + dy * 2][x + dx * 2] = beyond === '.' ? '*' : '$';
+      map[y + dy][x + dx] = target === '*' ? '+' : '@';
+    }
+
+    render();
+    checkWin();
+  }
+
+  function checkWin() {
+    let boxesLeft = 0;
+    for (let row of map) {
+      for (let cell of row) {
+        if (cell === '$') boxesLeft++;
+      }
+    }
+    if (boxesLeft === 0) {
+      if (currentLevel < levels.length - 1) {
+        setTimeout(() => {
+          alert("¡Nivel completado!");
+        }, 100);
+      } else {
+        setTimeout(() => {
+          alert("🎉 ¡Has completado todos los niveles!");
+        }, 100);
+      }
+    }
+  }
+
+  function resetLevel() {
+    loadLevel(currentLevel);
+  }
+
+  function nextLevel() {
+    if (currentLevel < levels.length - 1) {
+      currentLevel++;
+      loadLevel(currentLevel);
+    } else {
+      alert("No hay más niveles.");
+    }
+  }
+
+  window.addEventListener("keydown", e => {
+    switch (e.key) {
+      case "ArrowUp": move(0, -1); break;
+      case "ArrowDown": move(0, 1); break;
+      case "ArrowLeft": move(-1, 0); break;
+      case "ArrowRight": move(1, 0); break;
+    }
+  });
+
+  loadLevel(currentLevel);
+</script>
+
+</body>
+</html>
